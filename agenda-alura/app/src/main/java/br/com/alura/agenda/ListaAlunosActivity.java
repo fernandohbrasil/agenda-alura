@@ -4,9 +4,8 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
-import androidx.core.app.ActivityCompat;
-import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.ContextMenu;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -14,51 +13,62 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ListView;
+import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import java.util.List;
 
 import br.com.alura.agenda.adapter.AlunosAdapter;
 import br.com.alura.agenda.dao.AlunoDAO;
+import br.com.alura.agenda.dto.AlunosSync;
 import br.com.alura.agenda.modelo.Aluno;
+import br.com.alura.agenda.retrofit.RetrofitInicializador;
 import br.com.alura.agenda.tasks.EnviaAlunosTask;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class ListaAlunosActivity extends AppCompatActivity {
 
     private ListView listaAlunos;
+    private SwipeRefreshLayout swipe;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_lista_alunos);
 
-        listaAlunos = (ListView) findViewById(R.id.lista_alunos);
+        listaAlunos = findViewById(R.id.lista_alunos);
+        swipe = findViewById(R.id.swipe_lista_aluno);
 
-        listaAlunos.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> lista, View item, int position, long id) {
-                Aluno aluno = (Aluno) listaAlunos.getItemAtPosition(position);
+        listaAlunos.setOnItemClickListener((lista, item, position, id) -> {
+            Aluno aluno = (Aluno) listaAlunos.getItemAtPosition(position);
 
-                Intent intentVaiProFormulario = new Intent(ListaAlunosActivity.this, FormularioActivity.class);
-                intentVaiProFormulario.putExtra("aluno", aluno);
-                startActivity(intentVaiProFormulario);
-            }
+            Intent intentVaiProFormulario = new Intent(ListaAlunosActivity.this, FormularioActivity.class);
+            intentVaiProFormulario.putExtra("aluno", aluno);
+            startActivity(intentVaiProFormulario);
         });
 
-        Button novoAluno = (Button) findViewById(R.id.novo_aluno);
-        novoAluno.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intentVaiProFormulario = new Intent(ListaAlunosActivity.this, FormularioActivity.class);
-                startActivity(intentVaiProFormulario);
-            }
+        Button novoAluno = findViewById(R.id.novo_aluno);
+        novoAluno.setOnClickListener(v -> {
+            Intent intentVaiProFormulario = new Intent(ListaAlunosActivity.this, FormularioActivity.class);
+            startActivity(intentVaiProFormulario);
         });
+
+        swipe.setOnRefreshListener(this::buscaAlunos);
 
         registerForContextMenu(listaAlunos);
+        buscaAlunos();
     }
 
     private void carregaLista() {
         AlunoDAO dao = new AlunoDAO(this);
         List<Aluno> alunos = dao.buscaAlunos();
+
         dao.close();
 
         AlunosAdapter adapter = new AlunosAdapter(this, alunos);
@@ -69,6 +79,30 @@ public class ListaAlunosActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         carregaLista();
+    }
+
+    private void buscaAlunos() {
+        Call<AlunosSync> call = new RetrofitInicializador().getAlunoService().lista();
+        call.enqueue(new Callback<AlunosSync>() {
+            @Override
+            public void onResponse(Call<AlunosSync> call, Response<AlunosSync> response) {
+                AlunosSync alunosSync = response.body();
+                AlunoDAO dao = new AlunoDAO(ListaAlunosActivity.this);
+                dao.sincroniza(alunosSync.getAlunos());
+
+                dao.close();
+                carregaLista();
+                swipe.setRefreshing(false);
+
+            }
+
+            @Override
+            public void onFailure(Call<AlunosSync> call, Throwable t) {
+                Log.e("onFailure chamado", t.getMessage());
+                swipe.setRefreshing(false);
+
+            }
+        });
     }
 
     @Override
@@ -140,16 +174,28 @@ public class ListaAlunosActivity extends AppCompatActivity {
         itemSite.setIntent(intentSite);
 
         MenuItem deletar = menu.add("Deletar");
-        deletar.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
-            @Override
-            public boolean onMenuItemClick(MenuItem item) {
-                AlunoDAO dao = new AlunoDAO(ListaAlunosActivity.this);
-                dao.deleta(aluno);
-                dao.close();
+        deletar.setOnMenuItemClickListener(item -> {
+            Call<Void> call = new RetrofitInicializador().getAlunoService().deleta(aluno.getId());
 
-                carregaLista();
-                return false;
-            }
+            call.enqueue(new Callback<Void>() {
+                @Override
+                public void onResponse(Call<Void> call, Response<Void> response) {
+                    AlunoDAO dao = new AlunoDAO(ListaAlunosActivity.this);
+                    dao.deleta(aluno);
+                    dao.close();
+
+                    carregaLista();
+                }
+
+                @Override
+                public void onFailure(Call<Void> call, Throwable t) {
+                    Toast.makeText(ListaAlunosActivity.this,
+                            "Nao foi possivel remover o aluno",
+                            Toast.LENGTH_SHORT).show();
+                }
+            });
+
+            return false;
         });
     }
 

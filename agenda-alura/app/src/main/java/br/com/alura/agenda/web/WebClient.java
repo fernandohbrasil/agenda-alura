@@ -7,13 +7,15 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Scanner;
 
-/**
- * Created by renan on 20/01/16.
- */
 public class WebClient {
     public String post(String json) {
+        String endereco = "https://www.caelum.com.br/mobile";
+        return realizaConexao(json, endereco);
+    }
+
+    public String realizaConexao(String json, String endereco) {
         try {
-            URL url = new URL("https://www.caelum.com.br/mobile");
+            URL url = new URL(endereco);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestProperty("Content-type", "application/json");
             connection.setRequestProperty("Accept", "application/json");
