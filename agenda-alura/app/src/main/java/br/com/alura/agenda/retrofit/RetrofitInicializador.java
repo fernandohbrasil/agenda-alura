@@ -1,6 +1,7 @@
 package br.com.alura.agenda.retrofit;
 
 import br.com.alura.agenda.services.AlunoService;
+import br.com.alura.agenda.services.DispositivoService;
 import okhttp3.OkHttpClient;
 import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Retrofit;
@@ -19,7 +20,7 @@ public class RetrofitInicializador {
         client.addInterceptor(interceptor);
 
         retrofit = new Retrofit.Builder()
-                .baseUrl("http://192.168.1.15:8080/api/")
+                .baseUrl("http://192.168.43.45:8080/api/")
                 .addConverterFactory(JacksonConverterFactory.create())
                 .client(client.build())
                 .build();
@@ -27,5 +28,9 @@ public class RetrofitInicializador {
 
     public AlunoService getAlunoService() {
         return retrofit.create(AlunoService.class);
+    }
+
+    public DispositivoService getDispositivoService() {
+        return retrofit.create(DispositivoService.class);
     }
 }

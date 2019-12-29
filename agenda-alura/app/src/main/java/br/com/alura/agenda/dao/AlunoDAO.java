@@ -21,12 +21,13 @@ public class AlunoDAO extends SQLiteOpenHelper {
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        String sql = "CREATE TABLE Alunos (id INTEGER PRIMARY KEY, " +
+        String sql = "CREATE TABLE Alunos (id CHAR(36) PRIMARY KEY, " +
                 "nome TEXT NOT NULL, " +
                 "endereco TEXT, " +
                 "telefone TEXT, " +
                 "site TEXT, " +
-                "nota REAL); ";
+                "nota REAL, " +
+                "caminhoFoto TEXT);";
         db.execSQL(sql);
     }
 
@@ -163,11 +164,14 @@ public class AlunoDAO extends SQLiteOpenHelper {
     public void sincroniza(List<Aluno> alunos) {
         for (Aluno aluno : alunos) {
             if (existe(aluno)) {
-                altera(aluno);
-            } else {
+                if (aluno.estaDesativado()) {
+                    deleta(aluno);
+                } else {
+                    altera(aluno);
+                }
+            } else if (!aluno.estaDesativado()){
                 insere(aluno);
             }
-
         }
     }
 

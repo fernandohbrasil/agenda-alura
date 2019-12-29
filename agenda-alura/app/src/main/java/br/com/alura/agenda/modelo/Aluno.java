@@ -14,6 +14,17 @@ public class Aluno implements Serializable {
     private String site;
     private Double nota;
     private String caminhoFoto;
+    private int desativado;
+
+    public void setDesativado(int desativado) {
+        this.desativado = desativado;
+    }
+    public int getDesativado() {
+        return desativado;
+    }
+    public boolean estaDesativado(){
+        return desativado == 1;
+    }
 
     public String getId() {
         return id;
