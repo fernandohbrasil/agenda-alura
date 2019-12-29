@@ -57,6 +57,7 @@ public class FormularioActivity extends AppCompatActivity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
         if (resultCode == Activity.RESULT_OK) {
             if (requestCode == CODIGO_CAMERA) {
                 helper.carregaImagem(caminhoFoto);
@@ -77,6 +78,8 @@ public class FormularioActivity extends AppCompatActivity {
         switch (item.getItemId()) {
             case R.id.menu_formulario_ok:
                 Aluno aluno = helper.pegaAluno();
+
+                aluno.desincroniza();
 
                 AlunoDAO dao = new AlunoDAO(this);
                 if (aluno.getId() != null) {
